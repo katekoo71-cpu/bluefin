@@ -1126,12 +1126,11 @@
             const isMine = (pin.creator.name === getMyUser());
 
             if (isMine) {
-                container.innerHTML = `< div class= "text-sm text-center text-[#8B95A1] font-medium bg-[#F2F4F6] p-3 rounded-xl" > 내 핀입니다(답변 대기 중)</div >
+                container.innerHTML = `<div class="text-sm text-center text-[#8B95A1] font-medium bg-[#F2F4F6] p-3 rounded-xl">내 핀입니다 (답변 대기 중)</div>
             <button onclick="deletePin(${pin.id})" class="w-full bg-[#E5E8EB] py-3 rounded-[16px] mt-2 font-bold text-[#8B95A1] hover:bg-red-50 hover:text-red-500 transition-colors">삭제</button>`;
             } else {
-                container.innerHTML = `< button onclick = "acceptMission(${pin.id}, '${pin.creator.name}', '${pin.title.replace(/'/g, "\\'")}')" class="w - full bg - [#3182F6] text - white py - 4 rounded - [16px] font - bold shadow - lg text - [16px] btn - active">채팅으로 답변하기 (+${pin.rewardAmount})</button>`;
+                container.innerHTML = `<button onclick="acceptMission(${pin.id}, '${pin.creator.name}', '${pin.title.replace(/'/g, "\\'")}')" class="w-full bg-[#3182F6] text-white py-4 rounded-[16px] font-bold shadow-lg text-[16px] btn-active">채팅으로 답변하기 (+${pin.rewardAmount})</button>`;
             }
-        }
         }
 
         function closePinDetail() { document.getElementById('pin-detail-modal').classList.add('hidden'); }
