@@ -2,411 +2,282 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BluePin</title>
+    <meta name="apple-mobile-web-app-title" content="BluePin">
+    
     <link rel="icon" type="image/png" href="/logo.png">
-    <link rel="apple-touch-icon" href="/logo.png">    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <link rel="apple-touch-icon" href="/logo.png">
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-
-    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.8/dist/web/static/pretendard.css" />
-
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-        body, html {
-            margin: 0; padding: 0; height: 100%; overflow: hidden;
-            background: #F2F4F6;
-            font-family: "Pretendard Variable", Pretendard, sans-serif;
-            -webkit-font-smoothing: antialiased;
-        }
-        #map { width: 100%; height: 100%; z-index: 1; }
-        .ui-overlay { z-index: 1000; pointer-events: none; }
-        .ui-element { pointer-events: auto; }
-        .pt-safe-top { padding-top: max(env(safe-area-inset-top), 20px); }
-        .pb-safe-bottom { padding-bottom: max(env(safe-area-inset-bottom), 20px); }
+        body { margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; overflow: hidden; background: #f5f5f5; }
+        #map { width: 100%; height: 100vh; z-index: 1; }
         
-        .shadow-toss { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); }
-        .shadow-floating { box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12); }
-        .btn-active:active { transform: scale(0.96); transition: transform 0.1s; }
+        /* 1. 웰컴 팝업 */
+        #role-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .role-box {
+            background: white; padding: 30px; border-radius: 20px; text-align: center; width: 80%; max-width: 320px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .role-btn {
+            display: block; width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 12px;
+            font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.2s;
+        }
+        .btn-guest { background: #EEF2FF; color: #4F46E5; }
+        .btn-host { background: #4F46E5; color: white; }
 
-        /* V3 Special Colors */
-        .bg-brand { background-color: #0055FF; } /* Deep Blue */
-        .text-brand { color: #0055FF; }
-        
-        /* Store Mode Pulse */
-        @keyframes live-pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.4); }
-            70% { box-shadow: 0 0 0 15px rgba(255, 59, 48, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0); }
+        /* 2. 사장님 리모컨 패널 */
+        #host-controls {
+            position: fixed; bottom: -400px; left: 0; width: 100%;
+            background: white; border-radius: 20px 20px 0 0;
+            padding: 20px; box-sizing: border-box; z-index: 2000;
+            transition: bottom 0.3s ease-out;
+            box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
         }
-        .live-marker { animation: live-pulse 2s infinite; }
+        #host-controls.active { bottom: 0; }
+
+        /* 3. 유료화(Pro) 스위치 디자인 */
+        .pro-toggle-area {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 15px; padding: 10px; background: #F3F4F6; border-radius: 10px;
+        }
+        .toggle-switch {
+            position: relative; display: inline-block; width: 50px; height: 28px;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc; transition: .4s; border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px;
+            background-color: white; transition: .4s; border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #4F46E5; }
+        input:checked + .slider:before { transform: translateX(22px); }
+
+        /* 4. 입력창 및 버튼 */
+        .input-group { margin-bottom: 15px; position: relative; }
+        .promo-input {
+            width: 100%; padding: 15px; border: 2px solid #E5E7EB; border-radius: 12px;
+            font-size: 16px; outline: none; box-sizing: border-box;
+            background: white;
+        }
+        .promo-input:disabled { background: #F9FAFB; color: #9CA3AF; cursor: not-allowed; }
+        
+        .action-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+        .action-btn {
+            padding: 15px 5px; border: none; border-radius: 12px;
+            font-size: 14px; font-weight: bold; color: white; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+        }
+        .btn-red { background: #EF4444; }
+        .btn-yellow { background: #F59E0B; }
+        .btn-blue { background: #3B82F6; }
+
+        /* 5. 지도 줌 레벨 정책 (CSS 마법) */
+        /* 기본적으로 툴팁(말풍선)은 숨김 */
+        .leaflet-tooltip { 
+            display: none !important; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            border: 2px solid #333; border-radius: 8px;
+            font-weight: bold; font-size: 13px;
+        }
+        /* 지도가 'zoomed-in' 클래스를 가질 때만 보임 */
+        .map-zoomed-in .leaflet-tooltip { display: block !important; }
+
+        .label-red { border-color: #EF4444; color: #EF4444; }
+        .label-yellow { border-color: #F59E0B; color: #F59E0B; }
+        .label-blue { border-color: #3B82F6; color: #3B82F6; }
+
+        #open-controls-btn {
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: #111; color: white; padding: 12px 24px; border-radius: 50px;
+            font-weight: bold; border: none; z-index: 1500; display: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
     </style>
 </head>
-
 <body>
-    <div id="view-map" class="w-full h-full relative">
-        <div id="map"></div>
+
+    <div id="role-overlay">
+        <div class="role-box">
+            <h2>BluePin V5 📍</h2>
+            <p style="color:#666; font-size:14px; margin-bottom:20px;">성수동 실시간 핫딜 지도</p>
+            <button class="role-btn btn-guest" onclick="setRole('guest')">🙋‍♂️ 손님으로 입장</button>
+            <button class="role-btn btn-host" onclick="setRole('host')">🏪 사장님 (Pro 체험)</button>
+        </div>
+    </div>
+
+    <div id="map"></div>
+    <button id="open-controls-btn" onclick="toggleControls()">📣 홍보하기</button>
+
+    <div id="host-controls">
+        <div class="pro-toggle-area">
+            <span style="font-weight:bold; font-size:14px;">💎 Pro 멤버십</span>
+            <label class="toggle-switch">
+                <input type="checkbox" id="pro-switch" onchange="toggleProMode()" checked>
+                <span class="slider"></span>
+            </label>
+        </div>
+
+        <h3 style="margin:0 0 10px 0;">오늘의 홍보 멘트</h3>
         
-        <div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-[900]">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0055FF" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19"></line>
-                <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
+        <div class="input-group">
+            <input type="text" id="promo-text" class="promo-input" placeholder="원하는 문구를 입력하세요 (Pro 전용)">
         </div>
+
+        <div class="action-buttons">
+            <button class="action-btn btn-red" onclick="handlePromo('discount', '🔥 마감세일')">🔥 마감/할인</button>
+            <button class="action-btn btn-yellow" onclick="handlePromo('fresh', '🍞 갓 나옴')">🍞 갓 나옴</button>
+            <button class="action-btn btn-blue" onclick="handlePromo('seat', '🪑 빈자리')">🪑 빈자리</button>
+        </div>
+        <p style="font-size:12px; color:#999; text-align:center; margin-top:15px;">
+            * 작성한 핀은 30분 뒤 자동으로 사라집니다.
+        </p>
     </div>
 
-    <div class="fixed top-0 left-0 right-0 px-5 pt-safe-top z-[2000] flex justify-between items-start pointer-events-none">
-        <div class="bg-white/90 backdrop-blur-md px-3 py-2 rounded-xl shadow-toss border border-white/20 pointer-events-auto">
-            <h1 class="text-brand font-black text-lg tracking-tight flex items-center gap-1">
-                <span class="text-2xl">📍</span> BluePin
-            </h1>
-        </div>
-
-        <div id="header-profile" onclick="showLoginModal()" 
-             class="bg-white/90 backdrop-blur-md px-4 py-2 rounded-full shadow-toss border border-white/20 pointer-events-auto cursor-pointer btn-active flex items-center gap-2">
-            <span class="text-sm font-bold text-slate-700" id="header-username">로그인</span>
-            <div class="w-2 h-2 rounded-full bg-slate-300" id="header-status-dot"></div>
-        </div>
-    </div>
-
-    <div id="fab-container" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[2000] hidden">
-        <button onclick="openStoreRemote()" 
-            class="bg-[#0055FF] text-white px-6 py-4 rounded-full shadow-floating flex items-center gap-2 btn-active ring-4 ring-white/30">
-            <span class="text-xl">📣</span>
-            <span class="font-bold text-lg">가게 알리기</span>
-        </button>
-    </div>
-
-    <div id="login-modal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[3000] hidden flex items-center justify-center p-5">
-        <div class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl relative">
-            <button onclick="closeLoginModal()" class="absolute top-6 right-6 text-slate-400">✕</button>
-            
-            <h2 class="text-2xl font-bold text-slate-900 mb-2">어떻게 오셨나요?</h2>
-            <p class="text-slate-500 text-sm mb-8">역할을 선택하고 시작해보세요.</p>
-
-            <div class="flex bg-slate-100 p-1 rounded-xl mb-6">
-                <button onclick="setLoginRole('USER')" id="tab-user" class="flex-1 py-3 rounded-lg text-sm font-bold transition-all bg-white shadow-sm text-slate-900">🙋‍♂️ 손님</button>
-                <button onclick="setLoginRole('STORE')" id="tab-store" class="flex-1 py-3 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700">🏪 사장님</button>
-            </div>
-
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 mb-1 pl-1">닉네임</label>
-                    <input type="text" id="input-nickname" placeholder="사용할 이름" class="w-full bg-slate-50 p-4 rounded-xl font-bold outline-none focus:ring-2 ring-blue-500/20">
-                </div>
-                
-                <div id="store-input-group" class="hidden">
-                    <label class="block text-xs font-bold text-slate-500 mb-1 pl-1">가게 이름</label>
-                    <input type="text" id="input-storename" placeholder="예: 성수베이킹" class="w-full bg-slate-50 p-4 rounded-xl font-bold outline-none focus:ring-2 ring-blue-500/20">
-                    <p class="text-[10px] text-blue-500 mt-1 pl-1">* 사장님 모드로 핀을 생성할 수 있습니다.</p>
-                </div>
-            </div>
-
-            <button onclick="doLogin()" class="w-full bg-[#0055FF] text-white py-4 rounded-xl font-bold text-lg mt-8 btn-active shadow-lg shadow-blue-500/30">
-                입장하기
-            </button>
-        </div>
-    </div>
-
-    <div id="store-remote" class="fixed bottom-0 left-0 right-0 bg-white rounded-t-[32px] p-6 pb-10 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-[3000] transform translate-y-full transition-transform duration-300">
-        <div class="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-6"></div>
-        
-        <h3 class="text-xl font-bold text-slate-900 mb-2">📢 지금 알릴 소식은?</h3>
-        <p class="text-slate-500 text-xs mb-6">버튼을 누르면 지도에 30분간 핀이 생성됩니다.</p>
-
-        <div class="grid grid-cols-2 gap-3">
-            <button onclick="createStorePin('🪑 빈자리 있어요', 'STORE')" 
-                class="bg-blue-50 hover:bg-blue-100 p-5 rounded-2xl flex flex-col items-center gap-2 btn-active border border-blue-100">
-                <span class="text-3xl">🪑</span>
-                <span class="font-bold text-slate-700">빈자리 있음</span>
-            </button>
-            <button onclick="createStorePin('🍞 갓 구운 빵', 'STORE')" 
-                class="bg-orange-50 hover:bg-orange-100 p-5 rounded-2xl flex flex-col items-center gap-2 btn-active border border-orange-100">
-                <span class="text-3xl">🍞</span>
-                <span class="font-bold text-slate-700">갓 구운 메뉴</span>
-            </button>
-            <button onclick="createStorePin('🏷️ 타임 세일', 'STORE')" 
-                class="bg-red-50 hover:bg-red-100 p-5 rounded-2xl flex flex-col items-center gap-2 btn-active border border-red-100">
-                <span class="text-3xl">🏷️</span>
-                <span class="font-bold text-slate-700">지금 할인 중</span>
-            </button>
-            <button onclick="createStorePin('📢 저희 가게 오세요', 'STORE')" 
-                class="bg-slate-50 hover:bg-slate-100 p-5 rounded-2xl flex flex-col items-center gap-2 btn-active border border-slate-100">
-                <span class="text-3xl">📢</span>
-                <span class="font-bold text-slate-700">직접 입력</span>
-            </button>
-        </div>
-        
-        <button onclick="closeStoreRemote()" class="w-full mt-6 py-3 text-slate-400 font-bold text-sm">닫기</button>
-    </div>
-
-    <div id="pin-detail" class="fixed bottom-10 left-5 right-5 bg-white rounded-[24px] p-6 shadow-floating z-[2500] hidden animate-[slideUp_0.3s_ease-out]">
-        <div class="flex justify-between items-start mb-2">
-            <span id="detail-type" class="bg-blue-100 text-blue-600 px-2 py-1 rounded-md text-[10px] font-bold">EVENT</span>
-            <button onclick="closePinDetail()" class="text-slate-300">✕</button>
-        </div>
-        <h3 id="detail-title" class="text-xl font-bold text-slate-900 mb-1">제목</h3>
-        <p id="detail-store" class="text-sm font-bold text-slate-500 mb-4">가게 이름</p>
-        
-        <div class="bg-slate-50 rounded-xl p-4 flex items-center justify-between">
-            <span class="text-xs font-bold text-slate-400">남은 시간</span>
-            <span id="detail-timer" class="text-xl font-black text-[#0055FF] tabular-nums">29:59</span>
-        </div>
-
-        <button id="btn-delete-pin" onclick="deleteMyPin()" class="w-full mt-3 bg-slate-100 text-slate-500 py-3 rounded-xl font-bold hidden">
-            내 핀 삭제하기
-        </button>
-    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
     <script>
         const socket = io();
-        let map, markersCluster;
-        let myUser = null; // { nickname, role, storeName }
-        let currentRole = 'USER'; // For Login Tab
-        let activeTimer = null; // For Countdown
-        let selectedPinId = null;
+        let map;
+        
+        // 🚨 1. 금칙어 DB (욕설 필터)
+        const FORBIDDEN_WORDS = ['바보', '멍청이', '망해라', '개XX', 'ㅅㅂ', '꺼져'];
 
-        // --- INIT ---
-        window.onload = function() {
-            initMap();
+        // 지도 초기화
+        map = L.map('map').setView([37.5445, 127.0560], 16);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: 'BluePin'
+        }).addTo(map);
+
+        // 🔭 2. 줌 레벨 정책 (멀어지면 글자 숨기기)
+        map.on('zoomend', function() {
+            const currentZoom = map.getZoom();
+            const mapEl = document.getElementById('map');
             
-            // Check LocalStorage
-            const saved = localStorage.getItem('bluepin_v3_user');
-            if(saved) {
-                myUser = JSON.parse(saved);
-                updateUI();
-                socket.emit('join', myUser.nickname);
+            // 줌 레벨 16 이상일 때만 'map-zoomed-in' 클래스 추가
+            if (currentZoom >= 16) {
+                mapEl.classList.add('map-zoomed-in');
             } else {
-                showLoginModal();
+                mapEl.classList.remove('map-zoomed-in');
             }
+        });
+        // 처음 로딩 시 체크
+        if(map.getZoom() >= 16) document.getElementById('map').classList.add('map-zoomed-in');
 
-            // Socket Events
-            socket.on('pinCreated', (pin) => {
-                renderPin(pin);
-            });
-            
-            socket.on('refreshPins', () => {
-                location.reload(); // Simple refresh for prototype
-            });
 
-            socket.on('pinDeleted', (id) => {
-                location.reload(); 
-            });
-
-            loadPins();
-        };
-
-        function initMap() {
-            map = L.map('map', { zoomControl: false }).setView([37.5445, 127.0561], 16); // Seongsu
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            markersCluster = L.markerClusterGroup({ showCoverageOnHover: false });
-            map.addLayer(markersCluster);
+        function setRole(role) {
+            document.getElementById('role-overlay').style.display = 'none';
+            if (role === 'host') {
+                document.getElementById('open-controls-btn').style.display = 'block';
+                navigator.geolocation.getCurrentPosition(pos => {
+                    const { latitude, longitude } = pos.coords;
+                    map.setView([latitude, longitude], 18);
+                });
+            }
         }
 
-        // --- AUTH ---
-        function setLoginRole(role) {
-            currentRole = role;
-            const tabUser = document.getElementById('tab-user');
-            const tabStore = document.getElementById('tab-store');
-            const storeInput = document.getElementById('store-input-group');
+        function toggleControls() {
+            document.getElementById('host-controls').classList.toggle('active');
+        }
 
-            if(role === 'STORE') {
-                tabStore.classList.replace('text-slate-500', 'text-slate-900');
-                tabStore.classList.add('bg-white', 'shadow-sm');
-                tabUser.classList.remove('bg-white', 'shadow-sm');
-                tabUser.classList.add('text-slate-500');
-                storeInput.classList.remove('hidden');
+        // 💸 3. 유료(Pro) vs 무료(Free) 모드 전환
+        function toggleProMode() {
+            const isPro = document.getElementById('pro-switch').checked;
+            const inputField = document.getElementById('promo-text');
+            
+            if (isPro) {
+                inputField.disabled = false;
+                inputField.placeholder = "원하는 문구를 입력하세요 (Pro 전용)";
+                inputField.value = "";
             } else {
-                tabUser.classList.replace('text-slate-500', 'text-slate-900');
-                tabUser.classList.add('bg-white', 'shadow-sm');
-                tabStore.classList.remove('bg-white', 'shadow-sm');
-                tabStore.classList.add('text-slate-500');
-                storeInput.classList.add('hidden');
+                inputField.disabled = true;
+                inputField.placeholder = "🔒 유료 회원만 직접 입력 가능";
+                inputField.value = "";
             }
         }
 
-        async function doLogin() {
-            const nickname = document.getElementById('input-nickname').value;
-            const storeName = document.getElementById('input-storename').value;
+        // 홍보 버튼 클릭 핸들러
+        function handlePromo(type, defaultText) {
+            const isPro = document.getElementById('pro-switch').checked;
+            const inputField = document.getElementById('promo-text');
+            let finalText = "";
 
-            if(!nickname) return alert("닉네임을 입력해주세요.");
-            if(currentRole === 'STORE' && !storeName) return alert("가게 이름을 입력해주세요.");
+            if (isPro) {
+                // Pro: 입력한 내용 사용
+                finalText = inputField.value.trim();
+                if (!finalText) {
+                    alert("Pro 사장님! 홍보할 내용을 적어주세요.");
+                    inputField.focus();
+                    return;
+                }
+                
+                // 🚨 욕설 필터링 체크
+                for (let badWord of FORBIDDEN_WORDS) {
+                    if (finalText.includes(badWord)) {
+                        alert(`🚫 비속어('${badWord}')가 포함되어 등록할 수 없습니다.`);
+                        return; // 전송 중단
+                    }
+                }
 
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nickname, role: currentRole, storeName })
-            });
-            const data = await res.json();
-
-            if(data.success) {
-                myUser = { nickname, role: currentRole, storeName };
-                localStorage.setItem('bluepin_v3_user', JSON.stringify(myUser));
-                closeLoginModal();
-                updateUI();
-                socket.emit('join', nickname);
-            }
-        }
-
-        function updateUI() {
-            if(!myUser) return;
-            
-            // Header
-            document.getElementById('header-username').innerText = myUser.role === 'STORE' ? myUser.storeName : myUser.nickname;
-            document.getElementById('header-status-dot').classList.replace('bg-slate-300', 'bg-green-400');
-
-            // FAB
-            const fab = document.getElementById('fab-container');
-            if(myUser.role === 'STORE') {
-                fab.classList.remove('hidden');
             } else {
-                fab.classList.add('hidden');
+                // Free: 기본 멘트 강제 사용
+                finalText = defaultText;
+                alert("🔒 무료 버전은 기본 문구로만 등록됩니다.\n(Pro 업그레이드 시 자유 입력 가능)");
             }
+
+            // 서버 전송
+            sendSignal(type, finalText);
         }
 
-        function showLoginModal() { document.getElementById('login-modal').classList.remove('hidden'); }
-        function closeLoginModal() { document.getElementById('login-modal').classList.add('hidden'); }
-
-        // --- STORE REMOTE ---
-        function openStoreRemote() {
-            document.getElementById('store-remote').classList.remove('translate-y-full');
-            document.getElementById('fab-container').classList.add('hidden');
-        }
-        function closeStoreRemote() {
-            document.getElementById('store-remote').classList.add('translate-y-full');
-            setTimeout(() => {
-                if(myUser.role === 'STORE') document.getElementById('fab-container').classList.remove('hidden');
-            }, 300);
-        }
-
-        async function createStorePin(title, type) {
-            if(!myUser || myUser.role !== 'STORE') return;
-
-            const center = map.getCenter();
-            
-            // Send to Server
-            const res = await fetch('/api/pins', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    title: title,
-                    content: "30분간 유효한 소식입니다.",
-                    latitude: center.lat,
-                    longitude: center.lng,
-                    type: 'STORE',
-                    creatorName: myUser.nickname
-                })
+        function sendSignal(type, text) {
+            navigator.geolocation.getCurrentPosition(position => {
+                const data = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                    type: type,
+                    message: text,
+                    time: Date.now()
+                };
+                socket.emit('bossSignal', data);
+                
+                alert(`📢 등록 완료!\n"${text}"`);
+                document.getElementById('promo-text').value = ''; 
+                toggleControls();
             });
+        }
+
+        // 지도 표시
+        socket.on('newSignal', (data) => {
+            if (Date.now() - data.time > 30 * 60 * 1000) return;
+
+            let colorClass = '';
+            if (data.type === 'discount') colorClass = 'label-red';
+            else if (data.type === 'fresh') colorClass = 'label-yellow';
+            else colorClass = 'label-blue';
+
+            const marker = L.marker([data.lat, data.lng]).addTo(map);
             
-            const data = await res.json();
-            if(data.success) {
-                closeStoreRemote();
-                loadPins(); // Reload
-                alert("📣 30분간 지도에 노출됩니다!");
-            } else {
-                alert("오류: " + data.message);
-            }
-        }
+            marker.bindTooltip(data.message, {
+                permanent: true,
+                direction: 'top',
+                className: `custom-label ${colorClass}`,
+                offset: [0, -10]
+            }).openTooltip();
 
-        // --- PINS & TIMER ---
-        async function loadPins() {
-            const res = await fetch('/api/pins');
-            const pins = await res.json();
-            markersCluster.clearLayers();
-            pins.forEach(renderPin);
-        }
-
-        function renderPin(pin) {
-            // Check Expiry
-            const now = Date.now();
-            const expires = new Date(pin.expiresAt).getTime();
-            if(expires <= now) return;
-
-            const isMine = myUser && (pin.creator.name === myUser.nickname);
-            
-            const iconHtml = `
-                <div class="relative w-12 h-12 flex items-center justify-center">
-                    <div class="absolute inset-0 bg-blue-500 rounded-full opacity-20 animate-ping"></div>
-                    <div class="relative w-10 h-10 bg-white rounded-full border-2 border-[#0055FF] shadow-lg flex items-center justify-center text-xl">
-                        ${pin.title.includes('빈자리') ? '🪑' : 
-                          pin.title.includes('빵') ? '🍞' : 
-                          pin.title.includes('세일') ? '🏷️' : '📢'}
-                    </div>
-                </div>
-            `;
-            
-            const icon = L.divIcon({ html: iconHtml, className: 'bg-transparent', iconSize: [48, 48] });
-            const marker = L.marker([pin.latitude, pin.longitude], { icon });
-
-            marker.on('click', () => showPinDetail(pin));
-            markersCluster.addLayer(marker);
-        }
-
-        function showPinDetail(pin) {
-            selectedPinId = pin.id;
-            const modal = document.getElementById('pin-detail');
-            modal.classList.remove('hidden');
-
-            document.getElementById('detail-title').innerText = pin.title;
-            document.getElementById('detail-store').innerText = pin.creator.storeName || "가게 정보";
-            
-            // Delete Button if mine
-            const btnDelete = document.getElementById('btn-delete-pin');
-            if(myUser && pin.creator.name === myUser.nickname) {
-                btnDelete.classList.remove('hidden');
-            } else {
-                btnDelete.classList.add('hidden');
-            }
-
-            // Start Timer
-            if(activeTimer) clearInterval(activeTimer);
-            updateTimer(pin.expiresAt);
-            activeTimer = setInterval(() => updateTimer(pin.expiresAt), 1000);
-        }
-
-        function closePinDetail() {
-            document.getElementById('pin-detail').classList.add('hidden');
-            if(activeTimer) clearInterval(activeTimer);
-            selectedPinId = null;
-        }
-
-        function updateTimer(isoDate) {
-            const now = Date.now();
-            const end = new Date(isoDate).getTime();
-            const diff = end - now;
-
-            if(diff <= 0) {
-                document.getElementById('detail-timer').innerText = "00:00 (종료)";
-                clearInterval(activeTimer);
-                return;
-            }
-
-            const m = Math.floor(diff / 60000);
-            const s = Math.floor((diff % 60000) / 1000);
-            document.getElementById('detail-timer').innerText = 
-                `${m}:${s.toString().padStart(2, '0')}`;
-        }
-
-        async function deleteMyPin() {
-            if(!selectedPinId || !myUser) return;
-            if(!confirm("정말 핀을 내리시겠습니까?")) return;
-
-            const res = await fetch(`/api/pins/${selectedPinId}`, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ requesterName: myUser.nickname })
-            });
-
-            const data = await res.json();
-            if(data.success) {
-                closePinDetail();
-                loadPins();
-            }
-        }
+            setInterval(() => {
+                const timeLeft = 30 * 60 * 1000 - (Date.now() - data.time);
+                if (timeLeft <= 0) map.removeLayer(marker);
+            }, 1000);
+        });
     </script>
 </body>
 </html>
