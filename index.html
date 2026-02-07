@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BluePin V12.1 🎵</title>
+    <title>BluePin V12.2 🎵</title>
     
     <link rel="icon" href="/logo.png">
     <link rel="apple-touch-icon" href="/logo.png">
@@ -17,10 +17,9 @@
         #map { width: 100%; height: 100vh; z-index: 1; background: #ddd; }
         .crosshair-cursor { cursor: crosshair !important; }
         
-        /* 상태 표시등 */
         #status-indicator { position: fixed; top: 10px; right: 10px; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; z-index: 2000; background: #EF4444; color: white; transition: background 0.3s; }
         
-        /* --- 웰컴 & 로그인 화면 --- */
+        /* 웰컴 & 로그인 */
         #role-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; }
         .role-box { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .role-btn { display: block; width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
@@ -29,10 +28,9 @@
         .hidden { display: none; }
         .link-text { color: #666; font-size: 13px; text-decoration: underline; cursor: pointer; margin-top: 10px; display: block; }
         
-        /* --- 알림 메시지 (토스트) --- */
         #toast-msg { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 30px; z-index: 3000; font-size: 14px; display: none; }
         
-        /* --- 지갑 & Sound Pay --- */
+        /* 지갑 & Sound Pay */
         #guest-wallet { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: white; padding: 15px 25px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1500; display: none; display: flex; align-items: center; gap: 10px; cursor: pointer; }
         .wallet-icon { font-size: 20px; } .wallet-amount { font-weight: bold; font-size: 18px; color: #4F46E5; }
         
@@ -40,7 +38,7 @@
         @keyframes flashEffect { 0% { opacity: 1; background: #2563EB; } 50% { opacity: 0.3; background: #60A5FA; } 100% { opacity: 1; background: #2563EB; } }
         .flashing { animation: flashEffect 0.3s infinite; }
         
-        /* --- 사장님 컨트롤 --- */
+        /* 사장님 컨트롤 */
         #crosshair { position: fixed; top: 50%; left: 50%; width: 40px; height: 40px; transform: translate(-50%, -50%); z-index: 1000; pointer-events: none; display: none; }
         #crosshair::before, #crosshair::after { content: ''; position: absolute; background: #EF4444; box-shadow: 0 0 4px white; border-radius: 2px; }
         #crosshair::before { top: 18px; left: 0; width: 40px; height: 4px; }
@@ -64,18 +62,14 @@
         .btn-red { background: #EF4444; } .btn-yellow { background: #F59E0B; } .btn-blue { background: #3B82F6; }
         #open-controls-btn { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #111; color: white; padding: 12px 24px; border-radius: 50px; font-weight: bold; border: none; z-index: 1500; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         
-        /* --- 팝업 버튼 스타일 (보상 차등화 & 신고) --- */
+        /* 버튼 스타일 */
         .delete-btn { width:100%; background:#EF4444; color:white; border:none; padding:8px; border-radius:5px; margin-top:5px; cursor:pointer; font-weight:bold; }
-        
         .btn-camera { width:100%; background:#10B981; color:white; border:none; padding:12px; border-radius:8px; margin-top:5px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .btn-text { width:100%; background:#3B82F6; color:white; border:none; padding:8px; border-radius:8px; margin-top:5px; cursor:pointer; font-weight:bold; font-size:12px; opacity: 0.9; }
-        
         .btn-translate { font-size: 11px; color: #666; background: #f3f4f6; border: 1px solid #ddd; padding: 3px 8px; border-radius: 12px; cursor: pointer; margin-top: 5px; }
         .btn-report { font-size: 11px; color: #EF4444; background: white; border: 1px solid #EF4444; padding: 2px 6px; border-radius: 4px; cursor: pointer; position:absolute; top:5px; right:5px; }
 
         .label-white { background: white; border-color: #666; color: #333; }
-        
-        /* 손님 질문 버튼 */
         #guest-ask-btn { position: fixed; bottom: 90px; right: 20px; width: 50px; height: 50px; border-radius: 50%; background: white; color: #333; border: 2px solid #ddd; font-size: 24px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1500; display: none; cursor: pointer; }
         
         .leaflet-tooltip { display: none !important; border: 2px solid #333; border-radius: 8px; font-weight: bold; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
@@ -98,8 +92,8 @@
 
     <div id="role-overlay">
         <div id="step-role" class="role-box">
-            <h2>BluePin V12.1 🎵</h2>
-            <p style="color:#666; font-size:14px; margin-bottom:20px;">Audio Branding & Hybrid Earn</p>
+            <h2>BluePin V12.2 🎵</h2>
+            <p style="color:#666; font-size:14px; margin-bottom:20px;">Snappy Sound (0.5s)</p>
             <button class="role-btn btn-guest" onclick="selectRole('guest')">🙋‍♂️ 손님 (포인트 벌기)</button>
             <button class="role-btn btn-host" onclick="selectRole('host')">🏪 사장님 (핀 꽂기)</button>
         </div>
@@ -122,7 +116,6 @@
     </div>
     
     <div id="map"></div>
-    
     <button id="open-controls-btn" onclick="toggleControls()">📣 여기 알리기</button>
     <button id="guest-ask-btn" onclick="enableAskMode()">❓</button>
 
@@ -161,19 +154,21 @@
 
         const statusEl = document.getElementById('status-indicator');
         
-        // ★ [Sound Pay] 힙한 오디오 브랜딩 (브라우저 정책 우회용)
+        // ★ [Sound Pay Tuning] 힙하고 짧고 경쾌하게!
         function playBrandSound() {
             if ('speechSynthesis' in window) {
-                // 1. 기존 발화 취소
                 window.speechSynthesis.cancel();
-                // 2. "Blue Pin" 설정
-                const msg = new SpeechSynthesisUtterance("Blue Pin");
-                msg.lang = 'en-US'; // 영어 발음
-                msg.rate = 0.8;     // 속도: 느리고 여유롭게
-                msg.pitch = 1.0;    // 톤: 차분하게
+                
+                // "BluePin!" (느낌표 추가로 억양 강조)
+                const msg = new SpeechSynthesisUtterance("BluePin!");
+                msg.lang = 'en-US'; 
+                
+                // ★ 튜닝 포인트: 아주 빠르고 높게
+                msg.rate = 1.5;     // 속도 1.5배 (휙 지나감)
+                msg.pitch = 1.3;    // 톤 1.3배 (경쾌함)
                 msg.volume = 1.0;
                 
-                // 목소리 로드 시도
+                // 영어 목소리 우선
                 const voices = window.speechSynthesis.getVoices();
                 const enVoice = voices.find(v => v.lang.includes('en-US')) || voices.find(v => v.lang.includes('en'));
                 if (enVoice) msg.voice = enVoice;
@@ -182,10 +177,9 @@
             }
         }
         
-        // 목소리 미리 로드 (크롬 대응)
+        // 목소리 미리 로드
         if ('speechSynthesis' in window) { window.speechSynthesis.getVoices(); }
 
-        // ★ 햅틱 진동
         function triggerHaptic() { if (navigator.vibrate) navigator.vibrate(50); }
 
         try {
@@ -256,22 +250,17 @@
             } else { alert(data.message); }
         }
 
-        // ★ [Sound Pay] 즉시 재생 로직 적용
         async function startFlash() {
             triggerHaptic();
-            
-            // 1. 사용자 확인 (클릭 이벤트 유지)
             if(!confirm("1000 BP를 사용하여 혜택을 받으시겠습니까?")) return;
-
-            // 2. ★ 소리부터 먼저 지른다! (브라우저 차단 회피)
+            
+            // ★ 즉시 소리 재생 (0.5초 컷)
             playBrandSound(); 
 
-            // 3. 화면 번쩍이기 시작
             const overlay = document.getElementById('flash-overlay'); 
             overlay.style.display = 'flex'; 
             overlay.classList.add('flashing');
 
-            // 4. 그 다음 서버에 보고 (돈 차감)
             try {
                 const res = await fetch('/use-point', { 
                     method: 'POST', 
@@ -281,10 +270,8 @@
                 const data = await res.json();
                 
                 if (data.success) {
-                    // 성공 시 포인트만 갱신 (이미 소리/화면은 나오고 있음)
                     document.getElementById('my-points').innerText = data.newPoints + " BP";
                 } else { 
-                    // 실패하면(돈 부족 등) 끄기
                     alert("❌ " + data.message); 
                     stopFlash();
                 }
