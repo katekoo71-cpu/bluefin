@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-        /* 기존 스타일 유지 */
+        /* 스타일 그대로 유지 */
         body { margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; overflow: hidden; background: #f5f5f5; }
         #map { width: 100%; height: 100vh; z-index: 1; background: #ddd; }
         #status-indicator { position: fixed; top: 10px; right: 10px; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; z-index: 2000; background: #EF4444; color: white; transition: background 0.3s; }
@@ -71,6 +71,9 @@
         .leaflet-tooltip { display: none !important; border: 2px solid #333; border-radius: 8px; font-weight: bold; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .map-zoomed-in .leaflet-tooltip { display: block !important; }
         .label-red { border-color: #EF4444; color: #EF4444; } .label-yellow { border-color: #F59E0B; color: #F59E0B; } .label-blue { border-color: #3B82F6; color: #3B82F6; }
+        
+        /* ★ [NEW] 삭제 버튼 스타일 */
+        .delete-btn { width:100%; background:#EF4444; color:white; border:none; padding:8px; border-radius:5px; margin-top:5px; cursor:pointer; font-weight:bold; }
     </style>
 </head>
 <body>
@@ -85,8 +88,8 @@
 
     <div id="role-overlay">
         <div id="step-role" class="role-box">
-            <h2>BluePin V8.1 📍</h2>
-            <p style="color:#666; font-size:14px; margin-bottom:20px;">포인트 차감 시스템 적용</p>
+            <h2>BluePin V9.0 📍</h2>
+            <p style="color:#666; font-size:14px; margin-bottom:20px;">삭제 기능 추가 (Sold Out)</p>
             <button class="role-btn btn-guest" onclick="selectRole('guest')">🙋‍♂️ 손님 (포인트 받기)</button>
             <button class="role-btn btn-host" onclick="selectRole('host')">🏪 사장님 (핀 꽂기)</button>
         </div>
@@ -144,16 +147,30 @@
         let socket;
         let myRole = ""; 
         let selectedRole = ""; 
-        let myUsername = ""; // ★ 현재 로그인한 아이디 저장 (포인트 깔 때 필요)
-        const coinSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
+        let myUsername = ""; 
+        let myStoreName = ""; // ★ 내 가게 이름 저장 (삭제 권한 확인용)
+        let markers = {}; // ★ 지도에 있는 핀들을 관리하는 장부
 
+        const coinSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3');
         const statusEl = document.getElementById('status-indicator');
+        
         try {
             socket = io();
             socket.on('connect', () => { statusEl.innerText = "🟢 실시간 연결됨"; statusEl.style.background = "#10B981"; });
             socket.on('disconnect', () => { statusEl.innerText = "🔴 연결 끊김"; statusEl.style.background = "#EF4444"; });
+            
             socket.on('loadPins', (pins) => { pins.forEach(pin => addMarkerToMap(pin)); });
             socket.on('newSignal', (data) => { addMarkerToMap(data); });
+            
+            // ★ [NEW] 서버가 "이 핀 지워!" 하면 지도에서 제거
+            socket.on('removePin', (id) => {
+                if (markers[id]) {
+                    map.removeLayer(markers[id]); // 지도에서 핀 뽑기
+                    delete markers[id]; // 장부에서 지우기
+                    console.log("핀 삭제됨:", id);
+                }
+            });
+
         } catch (e) { statusEl.innerText = "⚠️ 오류"; }
 
         let map = L.map('map').setView([37.5445, 127.0560], 16);
@@ -165,7 +182,6 @@
         });
         if(map.getZoom() >= 16) document.getElementById('map').classList.add('map-zoomed-in');
 
-        // --- 화면 전환 ---
         function selectRole(role) {
             selectedRole = role;
             document.getElementById('step-role').classList.add('hidden');
@@ -193,7 +209,6 @@
             document.getElementById('step-role').classList.remove('hidden');
         }
 
-        // --- 회원가입 & 로그인 ---
         async function doSignup() {
             const id = document.getElementById('sign-id').value;
             const pw = document.getElementById('sign-pw').value;
@@ -220,7 +235,8 @@
             const data = await res.json();
             if(data.success) {
                 myRole = data.role;
-                myUsername = id; // ★ 아이디 저장 (결제할 때 씀)
+                myUsername = id; 
+                myStoreName = data.storeName; // ★ 내 가게 이름 저장
                 document.getElementById('role-overlay').style.display = 'none';
                 if (myRole === 'host') {
                     document.getElementById('current-store-name').innerText = data.storeName;
@@ -239,30 +255,22 @@
             } else { alert(data.message); }
         }
 
-        // --- ★ [업데이트] 결제 및 차감 기능 ---
         async function startFlash() {
             if(!confirm("1000 BP를 사용하여 혜택을 받으시겠습니까?")) return;
-
-            // 1. 서버에 돈 깎아달라고 요청
             const res = await fetch('/use-point', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username: myUsername })
             });
             const data = await res.json();
-
-            // 2. 성공하면 번쩍임, 실패하면 거절
             if (data.success) {
-                // UI 포인트 갱신
                 document.getElementById('my-points').innerText = data.newPoints + " BP";
-                
-                // 번쩍이기 & 소리
                 const overlay = document.getElementById('flash-overlay');
                 overlay.style.display = 'flex';
                 overlay.classList.add('flashing');
                 coinSound.play();
             } else {
-                alert("❌ " + data.message); // "잔액이 부족합니다!" 알림
+                alert("❌ " + data.message); 
             }
         }
         function stopFlash() {
@@ -271,6 +279,13 @@
             overlay.classList.remove('flashing');
             coinSound.pause();
             coinSound.currentTime = 0;
+        }
+
+        // ★ [NEW] 핀 삭제 요청 함수
+        function deletePin(pinId) {
+            if(confirm("정말 이 핀을 삭제하시겠습니까? (즉시 사라집니다)")) {
+                socket.emit('deletePin', pinId);
+            }
         }
 
         function toggleControls() { document.getElementById('host-controls').classList.toggle('active'); }
@@ -302,15 +317,40 @@
             socket.emit('bossSignal', data);
             document.getElementById('promo-text').value = ''; toggleControls();
         }
+
         function addMarkerToMap(data) {
             const createdTime = new Date(data.createdAt || data.time).getTime();
             const timeLeft = 30 * 60 * 1000 - (Date.now() - createdTime);
             if (timeLeft <= 0) return;
+
             let colorClass = data.type === 'discount' ? 'label-red' : (data.type === 'fresh' ? 'label-yellow' : 'label-blue');
             const displayMsg = `[${data.storeName || '가게'}]<br>${data.message}`;
+            
             const marker = L.marker([data.lat, data.lng]).addTo(map);
             marker.bindTooltip(displayMsg, { permanent: true, direction: 'top', className: `custom-label ${colorClass}`, offset: [0, -10] }).openTooltip();
-            setTimeout(() => map.removeLayer(marker), timeLeft);
+            
+            // ★ [NEW] 내 가게 핀이면, 클릭했을 때 삭제 버튼 보여주기
+            if (myRole === 'host' && data.storeName === myStoreName) {
+                const popupContent = `
+                    <div style="text-align:center;">
+                        <b>${data.message}</b><br>
+                        <button class="delete-btn" onclick="deletePin('${data._id}')">🗑 삭제하기</button>
+                    </div>
+                `;
+                marker.bindPopup(popupContent);
+            }
+
+            // ★ 핀 관리 장부에 등록 (삭제할 때 찾으려고)
+            if(data._id) {
+                markers[data._id] = marker;
+            }
+            
+            setTimeout(() => {
+                if(markers[data._id]) { // 아직 안 지워졌다면
+                    map.removeLayer(marker);
+                    delete markers[data._id];
+                }
+            }, timeLeft);
         }
     </script>
 </body>
