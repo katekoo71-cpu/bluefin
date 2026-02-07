@@ -28,7 +28,7 @@ const userSchema = new mongoose.Schema({
 });
 const User = mongoose.model('User', userSchema);
 
-// 사진 용량 제한 50MB
+// 사진 용량 제한
 app.use(express.json({ limit: '50mb' }));
 app.use(express.static(__dirname));
 
@@ -72,7 +72,7 @@ app.post('/use-point', async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: "오류" }); }
 });
 
-// ★ [UPDATE] 답변 처리 (텍스트 OR 사진)
+// ★ [UPDATE] 보상 차등 지급 (Text=100, Photo=500)
 app.post('/answer-mission', async (req, res) => {
   try {
     const { username, pinId, photo, answerText } = req.body; 
@@ -80,17 +80,24 @@ app.post('/answer-mission', async (req, res) => {
     const user = await User.findOne({ username });
     if (!user) return res.status(400).json({ success: false, message: "유저 없음" });
     
-    // 보상 지급 (500P)
-    user.points += 500;
+    // 보상 로직 분기
+    let reward = 0;
+    let msg = "";
+    
+    if (photo) {
+      reward = 500; // 사진은 500원
+      msg = "📸 사진 인증 성공! (+500 BP)";
+    } else {
+      reward = 100; // 글자는 100원
+      msg = "✍️ 제보 성공! (+100 BP)";
+    }
+    
+    user.points += reward;
     await user.save();
 
-    // 핀 삭제 (미션 완료)
     await Pin.findByIdAndDelete(pinId);
-    
     io.emit('removePin', pinId);
     
-    // 응답 메시지 다르게 주기
-    const msg = photo ? "사진 인증 성공! 500P 지급됨!" : "답변 등록 성공! 500P 지급됨!";
     res.json({ success: true, newPoints: user.points, message: msg });
   } catch (err) {
     res.status(500).json({ success: false, message: "서버 오류" });
@@ -113,7 +120,15 @@ io.on('connection', async (socket) => {
     await Pin.findByIdAndDelete(pinId);
     io.emit('removePin', pinId);
   });
+
+  // ★ [NEW] 신고 접수 (즉시 삭제 처리 - 자정 작용)
+  socket.on('reportPin', async (pinId) => {
+    console.log(`🚨 신고 접수: ${pinId}`);
+    // 실제 서비스에선 '신고 누적 3회 시 삭제' 등이 좋지만, MVP에선 즉시 삭제로 안전 확보
+    await Pin.findByIdAndDelete(pinId); 
+    io.emit('removePin', pinId);
+  });
 });
 
 const port = process.env.PORT || 3000;
-server.listen(port, () => { console.log(`🚀 BluePin V10.3 Hybrid Server: ${port}`); });
+server.listen(port, () => { console.log(`🚀 BluePin V12.0 Real-World Edition: ${port}`); });
