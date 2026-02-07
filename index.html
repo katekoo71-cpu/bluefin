@@ -12,11 +12,15 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
     <style>
-        /* 기존 스타일 유지 */
+        /* --- 기본 스타일 --- */
         body { margin: 0; padding: 0; font-family: 'Pretendard', sans-serif; overflow: hidden; background: #f5f5f5; }
         #map { width: 100%; height: 100vh; z-index: 1; background: #ddd; }
         .crosshair-cursor { cursor: crosshair !important; }
+        
+        /* 상태 표시등 */
         #status-indicator { position: fixed; top: 10px; right: 10px; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; z-index: 2000; background: #EF4444; color: white; transition: background 0.3s; }
+        
+        /* --- 웰컴 & 로그인 화면 --- */
         #role-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; }
         .role-box { background: white; padding: 30px; border-radius: 20px; text-align: center; width: 85%; max-width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
         .role-btn { display: block; width: 100%; padding: 15px; margin: 10px 0; border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
@@ -24,39 +28,59 @@
         .login-input { width: 100%; padding: 12px; margin: 5px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
         .hidden { display: none; }
         .link-text { color: #666; font-size: 13px; text-decoration: underline; cursor: pointer; margin-top: 10px; display: block; }
+        
+        /* --- 알림 메시지 (토스트) --- */
         #toast-msg { position: fixed; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); color: white; padding: 10px 20px; border-radius: 30px; z-index: 3000; font-size: 14px; display: none; }
+        
+        /* --- 지갑 & Sound Pay --- */
         #guest-wallet { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: white; padding: 15px 25px; border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 1500; display: none; display: flex; align-items: center; gap: 10px; cursor: pointer; }
         .wallet-icon { font-size: 20px; } .wallet-amount { font-weight: bold; font-size: 18px; color: #4F46E5; }
+        
         #flash-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #2563EB; z-index: 99999; display: none; align-items: center; justify-content: center; flex-direction: column; color: white; text-align: center; }
         @keyframes flashEffect { 0% { opacity: 1; background: #2563EB; } 50% { opacity: 0.3; background: #60A5FA; } 100% { opacity: 1; background: #2563EB; } }
         .flashing { animation: flashEffect 0.3s infinite; }
+        
+        /* --- 사장님 컨트롤 --- */
         #crosshair { position: fixed; top: 50%; left: 50%; width: 40px; height: 40px; transform: translate(-50%, -50%); z-index: 1000; pointer-events: none; display: none; }
         #crosshair::before, #crosshair::after { content: ''; position: absolute; background: #EF4444; box-shadow: 0 0 4px white; border-radius: 2px; }
         #crosshair::before { top: 18px; left: 0; width: 40px; height: 4px; }
         #crosshair::after { top: 0; left: 18px; width: 4px; height: 40px; }
+        
         #host-controls { position: fixed; bottom: -500px; left: 0; width: 100%; background: white; border-radius: 20px 20px 0 0; padding: 20px; z-index: 2000; transition: bottom 0.3s; padding-bottom: 40px; box-sizing: border-box; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); }
         #host-controls.active { bottom: 0; }
+        
         .pro-toggle-area { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding: 10px; background: #F3F4F6; border-radius: 10px; border: 1px solid #E5E7EB; }
         .toggle-switch { position: relative; display: inline-block; width: 50px; height: 28px; }
         .toggle-switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
         .slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
         input:checked + .slider { background-color: #4F46E5; } input:checked + .slider:before { transform: translateX(22px); }
+        
         .promo-input { width: 100%; padding: 15px; border: 2px solid #E5E7EB; border-radius: 12px; font-size: 16px; margin-bottom: 15px; box-sizing: border-box; transition: 0.3s; }
         .promo-input:disabled { background: #f3f4f6; color: #999; cursor: not-allowed; }
+        
         .action-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
         .action-btn { padding: 12px 2px; border: none; border-radius: 12px; font-size: 13px; font-weight: bold; color: white; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; word-break: keep-all; }
         .btn-red { background: #EF4444; } .btn-yellow { background: #F59E0B; } .btn-blue { background: #3B82F6; }
         #open-controls-btn { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #111; color: white; padding: 12px 24px; border-radius: 50px; font-weight: bold; border: none; z-index: 1500; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
         
+        /* --- 팝업 버튼 스타일 (보상 차등화 & 신고) --- */
         .delete-btn { width:100%; background:#EF4444; color:white; border:none; padding:8px; border-radius:5px; margin-top:5px; cursor:pointer; font-weight:bold; }
+        
         .btn-camera { width:100%; background:#10B981; color:white; border:none; padding:12px; border-radius:8px; margin-top:5px; cursor:pointer; font-weight:bold; font-size:14px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .btn-text { width:100%; background:#3B82F6; color:white; border:none; padding:8px; border-radius:8px; margin-top:5px; cursor:pointer; font-weight:bold; font-size:12px; opacity: 0.9; }
+        
         .btn-translate { font-size: 11px; color: #666; background: #f3f4f6; border: 1px solid #ddd; padding: 3px 8px; border-radius: 12px; cursor: pointer; margin-top: 5px; }
         .btn-report { font-size: 11px; color: #EF4444; background: white; border: 1px solid #EF4444; padding: 2px 6px; border-radius: 4px; cursor: pointer; position:absolute; top:5px; right:5px; }
 
         .label-white { background: white; border-color: #666; color: #333; }
+        
+        /* 손님 질문 버튼 */
         #guest-ask-btn { position: fixed; bottom: 90px; right: 20px; width: 50px; height: 50px; border-radius: 50%; background: white; color: #333; border: 2px solid #ddd; font-size: 24px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 1500; display: none; cursor: pointer; }
+        
+        .leaflet-tooltip { display: none !important; border: 2px solid #333; border-radius: 8px; font-weight: bold; z-index: 1000; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .map-zoomed-in .leaflet-tooltip { display: block !important; }
+        .label-red { border-color: #EF4444; color: #EF4444; } .label-yellow { border-color: #F59E0B; color: #F59E0B; } .label-blue { border-color: #3B82F6; color: #3B82F6; }
     </style>
 </head>
 <body>
@@ -75,7 +99,7 @@
     <div id="role-overlay">
         <div id="step-role" class="role-box">
             <h2>BluePin V12.1 🎵</h2>
-            <p style="color:#666; font-size:14px; margin-bottom:20px;">Audio Branding (Soft Voice)</p>
+            <p style="color:#666; font-size:14px; margin-bottom:20px;">Audio Branding & Hybrid Earn</p>
             <button class="role-btn btn-guest" onclick="selectRole('guest')">🙋‍♂️ 손님 (포인트 벌기)</button>
             <button class="role-btn btn-host" onclick="selectRole('host')">🏪 사장님 (핀 꽂기)</button>
         </div>
@@ -98,6 +122,7 @@
     </div>
     
     <div id="map"></div>
+    
     <button id="open-controls-btn" onclick="toggleControls()">📣 여기 알리기</button>
     <button id="guest-ask-btn" onclick="enableAskMode()">❓</button>
 
@@ -134,32 +159,34 @@
         let markers = {}; let isAskMode = false;
         let targetPinId = null; 
 
-        // ★ [Sound Pay] 오디오 브랜딩 기능
-        // 브라우저의 TTS(Text-to-Speech) 기능을 사용하여 "BluePin"을 말하게 함
-        function playBrandSound() {
-            if ('speechSynthesis' in window) {
-                // 1. "Blue Pin"이라고 말할 준비 (띄어쓰기 해야 발음이 더 좋음)
-                const utterance = new SpeechSynthesisUtterance("Blue Pin");
-                
-                // 2. 목소리 설정 (영어, 여성 목소리 선호)
-                utterance.lang = 'en-US'; 
-                utterance.rate = 0.8; // 속도: 0.8 (약간 천천히, 여유롭게)
-                utterance.pitch = 1.0; // 톤: 보통
-                utterance.volume = 1.0; // 볼륨: 최대 (펍에서도 들려야 하니까)
-
-                // 3. 말하기
-                window.speechSynthesis.speak(utterance);
-            } else {
-                // TTS 지원 안 하는 구형 브라우저용 백업 (띵 소리)
-                new Audio('https://assets.mixkit.co/active_storage/sfx/2000/2000-preview.mp3').play();
-            }
-        }
-
         const statusEl = document.getElementById('status-indicator');
         
-        function triggerHaptic() {
-            if (navigator.vibrate) navigator.vibrate(50); 
+        // ★ [Sound Pay] 힙한 오디오 브랜딩 (브라우저 정책 우회용)
+        function playBrandSound() {
+            if ('speechSynthesis' in window) {
+                // 1. 기존 발화 취소
+                window.speechSynthesis.cancel();
+                // 2. "Blue Pin" 설정
+                const msg = new SpeechSynthesisUtterance("Blue Pin");
+                msg.lang = 'en-US'; // 영어 발음
+                msg.rate = 0.8;     // 속도: 느리고 여유롭게
+                msg.pitch = 1.0;    // 톤: 차분하게
+                msg.volume = 1.0;
+                
+                // 목소리 로드 시도
+                const voices = window.speechSynthesis.getVoices();
+                const enVoice = voices.find(v => v.lang.includes('en-US')) || voices.find(v => v.lang.includes('en'));
+                if (enVoice) msg.voice = enVoice;
+
+                window.speechSynthesis.speak(msg);
+            }
         }
+        
+        // 목소리 미리 로드 (크롬 대응)
+        if ('speechSynthesis' in window) { window.speechSynthesis.getVoices(); }
+
+        // ★ 햅틱 진동
+        function triggerHaptic() { if (navigator.vibrate) navigator.vibrate(50); }
 
         try {
             socket = io();
@@ -229,21 +256,45 @@
             } else { alert(data.message); }
         }
 
+        // ★ [Sound Pay] 즉시 재생 로직 적용
         async function startFlash() {
             triggerHaptic();
+            
+            // 1. 사용자 확인 (클릭 이벤트 유지)
             if(!confirm("1000 BP를 사용하여 혜택을 받으시겠습니까?")) return;
-            const res = await fetch('/use-point', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: myUsername }) });
-            const data = await res.json();
-            if (data.success) {
-                document.getElementById('my-points').innerText = data.newPoints + " BP";
-                const overlay = document.getElementById('flash-overlay'); overlay.style.display = 'flex'; overlay.classList.add('flashing'); 
-                
-                // ★ 여기서 브랜드 사운드 재생!
-                playBrandSound(); 
 
-            } else { alert("❌ " + data.message); }
+            // 2. ★ 소리부터 먼저 지른다! (브라우저 차단 회피)
+            playBrandSound(); 
+
+            // 3. 화면 번쩍이기 시작
+            const overlay = document.getElementById('flash-overlay'); 
+            overlay.style.display = 'flex'; 
+            overlay.classList.add('flashing');
+
+            // 4. 그 다음 서버에 보고 (돈 차감)
+            try {
+                const res = await fetch('/use-point', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ username: myUsername }) 
+                });
+                const data = await res.json();
+                
+                if (data.success) {
+                    // 성공 시 포인트만 갱신 (이미 소리/화면은 나오고 있음)
+                    document.getElementById('my-points').innerText = data.newPoints + " BP";
+                } else { 
+                    // 실패하면(돈 부족 등) 끄기
+                    alert("❌ " + data.message); 
+                    stopFlash();
+                }
+            } catch(e) {
+                alert("통신 오류!");
+                stopFlash();
+            }
         }
-        function stopFlash() { const overlay = document.getElementById('flash-overlay'); overlay.style.display = 'none'; overlay.classList.remove('flashing'); } // 소리 멈춤은 없음(짧으니까)
+        function stopFlash() { const overlay = document.getElementById('flash-overlay'); overlay.style.display = 'none'; overlay.classList.remove('flashing'); }
+        
         function deletePin(pinId) { triggerHaptic(); if(confirm("정말 이 핀을 삭제하시겠습니까?")) socket.emit('deletePin', pinId); }
         function enableAskMode() { triggerHaptic(); isAskMode = true; document.getElementById('map').classList.add('crosshair-cursor'); document.getElementById('toast-msg').style.display = 'block'; }
         
